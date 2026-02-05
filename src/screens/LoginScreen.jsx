@@ -44,7 +44,7 @@ function LoginScreen({ go }) {
     setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const emailError = validateEmail(form.email);
     const passwordError = validatePassword(form.password);
 
@@ -57,9 +57,31 @@ function LoginScreen({ go }) {
 
     if (Object.keys(newErrors).length > 0) return;
 
-    // временно без backend
-    login(form.email);
-    go("main");
+    try {
+      // Отправка запроса на сервер для авторизации
+      const response = await fetch("https://miniapp-backend-oio7.onrender.com/auth/telegram", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          initData: window.Telegram.WebApp.initData,
+          user: { email: form.email, password: form.password },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.accessToken) {
+        // Сохраняем токен в localStorage и переходим на главный экран
+        localStorage.setItem("token", data.accessToken);
+        go("main");  // Переход на главный экран
+      } else {
+        console.error("Ошибка входа");
+      }
+    } catch (error) {
+      console.error("Ошибка запроса:", error);
+    }
   };
 
   return (
@@ -87,9 +109,7 @@ function LoginScreen({ go }) {
               type="email"
               placeholder="E-MAIL"
               value={form.email}
-              onChange={(e) =>
-                handleChange("email", e.target.value)
-              }
+              onChange={(e) => handleChange("email", e.target.value)}
               onBlur={() => handleBlur("email")}
             />
           </div>
@@ -108,9 +128,7 @@ function LoginScreen({ go }) {
               type={showPassword ? "text" : "password"}
               placeholder="ПАРОЛЬ"
               value={form.password}
-              onChange={(e) =>
-                handleChange("password", e.target.value)
-              }
+              onChange={(e) => handleChange("password", e.target.value)}
               onBlur={() => handleBlur("password")}
             />
 
@@ -121,7 +139,6 @@ function LoginScreen({ go }) {
             >
               <img src="/icons/eye.svg" alt="Показать пароль" />
             </button>
-
           </div>
           {errors.password && (
             <div className="input-error">

@@ -6,16 +6,14 @@ import { LEVELS, getCurrentLevel } from "../utils/levels";
 
 function ProfileScreen({ go }) {
   const [showPassword, setShowPassword] = useState(false);
-  const { user } = useUser();
+  const { user } = useUser(); // Используем контекст пользователя, если нужно
   const currentLevel = getCurrentLevel(LEVELS, user.experience);
-
 
   const [savedProfile, setSavedProfile] = useState({
     firstName: "ДАНИЛ",
     lastName: "ПРОКОШЕВ",
     id: "000001",
     role: "ГЛАВНЫЙ ИНЖЕНЕР",
-
     email: "DANILPRO0220@GMAIL.COM",
     password: "",
     direction: "ИГД",
@@ -26,14 +24,66 @@ function ProfileScreen({ go }) {
   const [draftProfile, setDraftProfile] = useState({ ...savedProfile });
 
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
 
+  // API URL для запроса к backend
+  const BACKEND_URL = "https://miniapp-backend-oio7.onrender.com";
 
-  const handleSave = () => {
+  // Получаем профиль пользователя при монтировании компонента
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (data) {
+          setSavedProfile(data); // Присваиваем полученные данные в savedProfile
+          setDraftProfile(data); // Присваиваем данные в draftProfile для редактирования
+        }
+      } catch (error) {
+        console.error("Ошибка запроса:", error);
+      } finally {
+        setIsLoading(false); // Завершаем загрузку
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
     if (!canSave) return;
-    setSavedProfile(draftProfile);
-    console.log("SAVE PROFILE:", draftProfile);
-  };
 
+    // Отправляем обновленный профиль на сервер
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`${BACKEND_URL}/me`, {
+        method: "PUT", // Используем PUT для обновления
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(draftProfile),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setSavedProfile(draftProfile);
+        console.log("Профиль обновлен:", draftProfile);
+      } else {
+        console.error("Ошибка сохранения профиля");
+      }
+    } catch (error) {
+      console.error("Ошибка запроса:", error);
+    }
+  };
 
   const validateProfile = (profile) => {
     const newErrors = {};
@@ -66,12 +116,13 @@ function ProfileScreen({ go }) {
     setErrors(validationErrors);
   }, [draftProfile]);
 
-  const isChanged =
-    JSON.stringify(draftProfile) !== JSON.stringify(savedProfile);
-
+  const isChanged = JSON.stringify(draftProfile) !== JSON.stringify(savedProfile);
   const isValid = Object.keys(errors).length === 0;
   const canSave = isChanged && isValid;
 
+  if (isLoading) {
+    return <div>Загрузка...</div>;
+  }
 
   return (
     <div className="profile-screen">
@@ -97,7 +148,7 @@ function ProfileScreen({ go }) {
             <div className="profile-bottom">
               <div className="profile-role">{savedProfile.role}</div>
               <div className="profile-level">
-                  УРОВЕНЬ: {currentLevel.level}
+                УРОВЕНЬ: {currentLevel.level}
               </div>
             </div>
           </div>
