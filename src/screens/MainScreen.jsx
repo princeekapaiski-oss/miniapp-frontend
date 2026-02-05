@@ -1,10 +1,13 @@
 import "./MainScreen.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "../components/Header/Header";
 
 function MainScreen({ go }) {
   const titleRef = useRef(null);
+  const [activities, setActivities] = useState([]);
+  const [error, setError] = useState("");
 
+  // Функция для адаптации размера заголовка в зависимости от ширины
   useEffect(() => {
     const fitTitle = () => {
       const el = titleRef.current;
@@ -33,9 +36,33 @@ function MainScreen({ go }) {
     return () => window.removeEventListener("resize", fitTitle);
   }, []);
 
+  // Получение данных с бэкенда для активностей
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/activities`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,  // Авторизация с токеном
+          },
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          setActivities(data);
+        } else {
+          setError(data.error || "Failed to fetch activities");
+        }
+      } catch (err) {
+        setError("Failed to connect to the server.");
+      }
+    };
+
+    fetchActivities();
+  }, []);
+
   return (
     <div className="main-screen">
-
       <Header title="НЛО / ГЛАВНАЯ /" />
 
       <div className="main-content">
@@ -54,12 +81,13 @@ function MainScreen({ go }) {
         </div>
 
         <div className="main-actions">
-
+          {error && <div className="error">{error}</div>}
+          
           <button
             className="action-btn action-btn--wide"
             onClick={() => go("schedule")}
           >
-            <img src="/icons/schedule.svg" alt="" />
+            <img src="/icons/schedule.svg" alt="Schedule" />
             <span>РАСПИСАНИЕ<br />ВСТРЕЧ</span>
           </button>
 
@@ -68,7 +96,7 @@ function MainScreen({ go }) {
               className="action-btn action-btn--vertical"
               onClick={() => go("profile")}
             >
-              <img src="/icons/profile.svg" alt="" />
+              <img src="/icons/profile.svg" alt="Profile" />
               <span>ПРОФИЛЬ</span>
             </button>
 
@@ -76,18 +104,29 @@ function MainScreen({ go }) {
               className="action-btn action-btn--vertical"
               onClick={() => go("achievements")}
             >
-              <img src="/icons/achievements.svg" alt="" />
+              <img src="/icons/achievements.svg" alt="Achievements" />
               <span>ДОСТИЖЕНИЯ</span>
             </button>
           </div>
-
         </div>
 
+        <div className="activity-list">
+          <h3>Available Activities</h3>
+          <ul>
+            {activities.map((activity) => (
+              <li key={activity.id}>
+                <h4>{activity.title}</h4>
+                <p>{activity.description}</p>
+                <button onClick={() => console.log(`Registering for ${activity.title}`)}>
+                  Register
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
 
 export default MainScreen;
-
-// /icons/achievements.svg   /icons/profile.svg    /icons/schedule.svg

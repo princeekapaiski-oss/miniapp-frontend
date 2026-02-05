@@ -141,9 +141,7 @@ function LoginScreen({ go }) {
             </button>
           </div>
           {errors.password && (
-            <div className="input-error">
-              {errors.password}
-            </div>
+            <div className="input-error">{errors.password}</div>
           )}
 
           <button
